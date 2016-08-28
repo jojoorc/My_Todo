@@ -1,7 +1,10 @@
 class TodosController < ApplicationController
   before_action :load_todo, only: [:edit, :update, :destroy]
+  before_action :authenticate!
 
   def index
+    @todos = @current_user.todos
+    @todo = Todo.new
     load_todos
     build_todo
   end
@@ -21,9 +24,10 @@ class TodosController < ApplicationController
   end
 
   def create
-    build_todo
+    @todo = Todo.new(todo_params)
+    @todo.user_id = @current_user.id
     respond_to do |format|
-      if @todo.save
+      if @todo.save!
         format.html { redirect_to todos_path, notice: "创建成功" }
       else
         format.html { render :index }
@@ -34,11 +38,18 @@ class TodosController < ApplicationController
   def destroy
     @todo.destroy
     respond_to do |format|
-      format.html { redirect_to todos_url, notice: '删除成功' }
+      format.html { redirect_to todos_path, notice: '删除成功' }
     end
   end
 
   private
+
+  def authenticate!
+    @current_user = User.find_by(id: session[:user_id])
+    if current_user.blank?
+      redirect_to login_path and return
+    end
+  end
 
   def load_todo
     @todo ||= todo_scope.find(params[:id])
